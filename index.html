@@ -71,6 +71,11 @@
       font-weight: 700;
       margin: 8px 0 5px;
     }
+    .mobile-menu-main {
+      width: 100%;
+      margin: 8px 0 8px;
+      font-weight: 700;
+    }
     .mobile-help-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -375,11 +380,12 @@
         align-items: center;
       }
       #panelToggle {
-        width: 38px;
+        min-width: 92px;
         height: 38px;
-        padding: 0;
-        border-radius: 50%;
-        font-size: 18px;
+        padding: 0 12px;
+        border-radius: 999px;
+        font-size: 14px;
+        font-weight: 700;
         line-height: 1;
       }
       h1 {
@@ -425,13 +431,14 @@
     </div>
 
     <div id="mobileQuickHelp">
-      <div class="mobile-help-title">Что показывает карта</div>
+      <div class="mobile-help-title">Это карта школ</div>
       <p class="small">
         Каждая цветная точка — это дом. Цвет показывает школу, к которой он закреплен.
       </p>
       <p class="small">
         Нажмите на точку, чтобы увидеть адрес дома и школу.
       </p>
+      <button id="mobileMenuBtn" class="primary mobile-menu-main" type="button">Открыть меню</button>
       <div class="mobile-help-actions">
         <button id="mobileLegendBtn" type="button">Легенда</button>
         <button id="mobileFilterBtn" type="button">Фильтр</button>
@@ -744,6 +751,20 @@ function updateMobileViewport() {
   const height = window.innerHeight || document.documentElement.clientHeight || 650;
   document.documentElement.style.setProperty("--app-height", height + "px");
   setTimeout(() => map.invalidateSize({pan: false}), 120);
+  setPanelToggleText();
+}
+
+function setPanelToggleText() {
+  const button = document.getElementById("panelToggle");
+  const sidebar = document.getElementById("sidebar");
+  if (!button || !sidebar) {
+    return;
+  }
+  if (sidebar.classList.contains("collapsed")) {
+    button.textContent = isSmallScreen() ? "Меню" : "+";
+  } else {
+    button.textContent = isSmallScreen() ? "Свернуть" : "−";
+  }
 }
 
 function maybeCollapsePanelOnMobile() {
@@ -753,7 +774,7 @@ function maybeCollapsePanelOnMobile() {
   const sidebar = document.getElementById("sidebar");
   if (!sidebar.classList.contains("collapsed")) {
     sidebar.classList.add("collapsed");
-    document.getElementById("panelToggle").textContent = "+";
+    setPanelToggleText();
     setTimeout(() => map.invalidateSize({pan: false}), 200);
   }
 }
@@ -765,7 +786,7 @@ function maybeExpandPanelOnMobile() {
   const sidebar = document.getElementById("sidebar");
   if (sidebar.classList.contains("collapsed")) {
     sidebar.classList.remove("collapsed");
-    document.getElementById("panelToggle").textContent = "−";
+    setPanelToggleText();
     setTimeout(() => map.invalidateSize({pan: false}), 200);
   }
 }
@@ -774,7 +795,7 @@ function openPanelAndScrollTo(targetId) {
   const sidebar = document.getElementById("sidebar");
   if (sidebar.classList.contains("collapsed")) {
     sidebar.classList.remove("collapsed");
-    document.getElementById("panelToggle").textContent = "−";
+    setPanelToggleText();
   }
 
   setTimeout(() => {
@@ -1850,11 +1871,12 @@ async function downloadPng() {
 document.getElementById("panelToggle").addEventListener("click", () => {
   const sidebar = document.getElementById("sidebar");
   sidebar.classList.toggle("collapsed");
-  document.getElementById("panelToggle").textContent = sidebar.classList.contains("collapsed") ? "+" : "−";
+  setPanelToggleText();
   setTimeout(() => map.invalidateSize({pan: false}), 200);
 });
 
 document.getElementById("loadBtn").addEventListener("click", loadAndRender);
+document.getElementById("mobileMenuBtn").addEventListener("click", maybeExpandPanelOnMobile);
 document.getElementById("mobileLegendBtn").addEventListener("click", () => openPanelAndScrollTo("legendTitle"));
 document.getElementById("mobileFilterBtn").addEventListener("click", () => openPanelAndScrollTo("filterTitle"));
 document.getElementById("fitAcadBtn").addEventListener("click", () => fitRegion("acad"));
@@ -1875,6 +1897,7 @@ window.addEventListener("resize", updateMobileViewport);
 window.addEventListener("orientationchange", () => setTimeout(updateMobileViewport, 250));
 updateMobileViewport();
 maybeCollapsePanelOnMobile();
+setPanelToggleText();
 
 renderLegend();
 renderSchoolFilter();
