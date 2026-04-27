@@ -1,0 +1,1992 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Подомовая карта закрепления домов за школами: Академгородок, Шлюз, мкр. Щ, Ложок</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIINfQ1IYhU8VxQnO2l5z4kR4C9wPuEG8dk=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: #222;
+      background: #edf1f5;
+      overflow: hidden;
+    }
+    #layout {
+      position: relative;
+      height: 100%;
+      height: 100vh;
+      height: var(--app-height, 100dvh);
+      min-height: 100%;
+      min-height: 100svh;
+      overflow: hidden;
+    }
+    #map {
+      height: 100vh;
+      height: var(--app-height, 100dvh);
+      width: 100vw;
+      min-height: 100%;
+      min-height: 100svh;
+      background: #edf1f5;
+    }
+    #sidebar {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 1000;
+      width: 380px;
+      max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 24px);
+      padding: 12px 14px;
+      overflow: auto;
+      border: 1px solid rgba(80, 80, 80, 0.25);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.97);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+    }
+    #sidebar.collapsed {
+      width: auto;
+      max-height: none;
+      overflow: visible;
+    }
+    #sidebar.collapsed > *:not(#panelHeader) {
+      display: none;
+    }
+    #panelHeader {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+    #panelToggle {
+      flex: 0 0 auto;
+      padding: 5px 8px;
+      margin: 0;
+      border-color: #ccc;
+      background: #fff;
+    }
+    h1 {
+      font-size: 18px;
+      margin: 0 0 10px;
+      line-height: 1.25;
+    }
+    h2 {
+      font-size: 15px;
+      margin: 16px 0 8px;
+    }
+    p {
+      font-size: 13px;
+      line-height: 1.4;
+      margin: 7px 0;
+    }
+    button {
+      display: inline-block;
+      margin: 4px 4px 4px 0;
+      padding: 8px 10px;
+      border: 1px solid #777;
+      border-radius: 6px;
+      background: white;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    button.primary {
+      background: #0b6efd;
+      border-color: #0b6efd;
+      color: white;
+    }
+    button:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+    a.source-link {
+      color: #0b6efd;
+      text-decoration: none;
+    }
+    a.source-link:hover {
+      text-decoration: underline;
+    }
+    select {
+      width: 100%;
+      margin: 4px 0 8px;
+      padding: 8px 10px;
+      border: 1px solid #777;
+      border-radius: 6px;
+      background: white;
+      font-size: 13px;
+    }
+    .note {
+      padding: 8px 10px;
+      background: #fff8e6;
+      border-left: 4px solid #f0b429;
+      margin: 9px 0;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .warn {
+      padding: 8px 10px;
+      background: #fff0f0;
+      border-left: 4px solid #d33;
+      margin: 9px 0;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .ok {
+      padding: 8px 10px;
+      background: #ecfff1;
+      border-left: 4px solid #39a852;
+      margin: 9px 0;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .legend-row {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      column-gap: 8px;
+      align-items: center;
+      margin: 5px 0;
+      font-size: 13px;
+    }
+    .legend-color {
+      width: 15px;
+      height: 15px;
+      border: 1px solid #333;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .stats {
+      font-size: 12px;
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 8px;
+    }
+    .stats td, .stats th {
+      border: 1px solid #ddd;
+      padding: 4px 5px;
+      vertical-align: top;
+    }
+    .stats th {
+      background: #f1f1f1;
+    }
+    .small {
+      font-size: 12px;
+      color: #555;
+    }
+    .mobile-only {
+      display: none;
+    }
+    .browser-open-btn {
+      width: 100%;
+      margin: 8px 0 0;
+      border-color: #0b6efd;
+      color: #0b6efd;
+      font-weight: 700;
+    }
+    .browser-open-status {
+      margin-top: 6px;
+    }
+    .popup-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .school-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #111;
+      text-shadow: 0 1px 2px #fff, 0 -1px 2px #fff, 1px 0 2px #fff, -1px 0 2px #fff;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .school-object-label {
+      padding: 2px 5px;
+      border: 1px solid rgba(0, 0, 0, 0.35);
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.92);
+      font-size: 12px;
+      font-weight: 700;
+      color: #111;
+      text-shadow: 0 1px 2px #fff, 0 -1px 2px #fff, 1px 0 2px #fff, -1px 0 2px #fff;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .school-object-marker-label {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      pointer-events: none;
+    }
+    .school-object-label-badge {
+      position: absolute;
+      left: 0;
+      top: 0;
+      display: inline-block;
+      padding: 2px 6px;
+      border: 1px solid rgba(0, 0, 0, 0.35);
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+      font-size: 12px;
+      font-weight: 700;
+      color: #111;
+      text-shadow: 0 1px 2px #fff, 0 -1px 2px #fff, 1px 0 2px #fff, -1px 0 2px #fff;
+      white-space: nowrap;
+      transform: translate(-50%, -34px);
+    }
+    .layer-toggle-row {
+      display: grid;
+      grid-template-columns: 18px 18px 1fr;
+      column-gap: 8px;
+      align-items: center;
+      margin: 5px 0;
+      font-size: 13px;
+    }
+    .layer-toggle-row input {
+      margin: 0;
+    }
+    .layer-toggle-color {
+      width: 15px;
+      height: 15px;
+      border: 1px solid #333;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .map-title {
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(80, 80, 80, 0.25);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .leaflet-control-layers {
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
+    }
+    .leaflet-control-layers-expanded {
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+      border-radius: 10px;
+    }
+    #loadingOverlay {
+      position: absolute;
+      inset: 0;
+      z-index: 1200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(237, 241, 245, 0.58);
+      pointer-events: none;
+    }
+    #loadingOverlay.visible {
+      display: flex;
+    }
+    #loadingCard {
+      width: min(520px, calc(100vw - 48px));
+      padding: 22px 26px;
+      border: 1px solid rgba(80, 80, 80, 0.25);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.97);
+      box-shadow: 0 14px 42px rgba(0, 0, 0, 0.25);
+      text-align: center;
+    }
+    #loadingTitle {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    #loadingMessage {
+      font-size: 15px;
+      line-height: 1.45;
+      color: #333;
+    }
+    .spinner {
+      width: 34px;
+      height: 34px;
+      margin: 0 auto 12px;
+      border: 4px solid #d8dee6;
+      border-top-color: #0b6efd;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    @media (max-width: 760px) {
+      html, body {
+        height: 100%;
+        min-height: 100svh;
+        overflow: hidden;
+      }
+      #layout {
+        height: 100dvh;
+        min-height: 100svh;
+      }
+      #map {
+        height: 100dvh;
+        min-height: 100svh;
+      }
+      #sidebar {
+        top: auto;
+        left: 10px;
+        right: 10px;
+        bottom: calc(10px + env(safe-area-inset-bottom));
+        width: auto;
+        max-width: none;
+        max-height: calc(var(--app-height, 100svh) - 20px - env(safe-area-inset-bottom));
+        padding: 12px;
+        border-radius: 18px;
+        -webkit-overflow-scrolling: touch;
+      }
+      #sidebar.collapsed {
+        right: auto;
+        width: min(320px, calc(100vw - 20px));
+        max-height: none;
+        padding: 10px 12px;
+        overflow: visible;
+      }
+      #sidebar.collapsed h1 {
+        max-width: 240px;
+        margin: 0;
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #panelHeader {
+        align-items: center;
+      }
+      #panelToggle {
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        border-radius: 50%;
+        font-size: 18px;
+        line-height: 1;
+      }
+      h1 {
+        font-size: 17px;
+      }
+      h2 {
+        margin: 14px 0 7px;
+      }
+      p, .note, .warn, .ok {
+        font-size: 13px;
+      }
+      button, select {
+        min-height: 40px;
+        font-size: 14px;
+      }
+      button.primary {
+        width: 100%;
+      }
+      .mobile-only {
+        display: block;
+      }
+      .leaflet-top.leaflet-left {
+        top: 10px;
+      }
+      .leaflet-control-zoom {
+        margin-top: max(10px, env(safe-area-inset-top));
+      }
+      #loadingCard {
+        width: calc(100vw - 32px);
+        padding: 18px 20px;
+      }
+      #loadingTitle {
+        font-size: 18px;
+      }
+      #loadingMessage {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+<div id="layout">
+  <aside id="sidebar">
+    <div id="panelHeader">
+      <h1>Подомовая карта закрепления домов за школами</h1>
+      <button id="panelToggle" title="Свернуть/развернуть панель">−</button>
+    </div>
+
+    <p><b>Охват:</b> Академгородок, Шлюз, мкр. «Щ», Ложок / Горки Академпарка.</p>
+
+    <div class="note">
+      Цветные точки показывают дома, закрепленные за школами.
+    </div>
+
+    <div class="note">
+      Данные карты обновляются при каждом открытии.
+    </div>
+
+    <div class="warn">
+      Ложок / Горки Академпарка находится вне города Новосибирска и отмечен отдельно.
+    </div>
+
+    <div class="note">
+      <b>Источник правил:</b> постановление о закреплении территорий за школами на 2026/2027 учебный год.
+      <br><a id="officialSourceLink" class="source-link" href="#" target="_blank" rel="noopener">Открыть источник</a>
+    </div>
+
+    <div class="note mobile-only">
+      На телефоне карта лучше работает в обычном браузере.
+      <button id="openBrowserBtn" class="browser-open-btn" type="button">Открыть в браузере</button>
+      <div id="openBrowserStatus" class="small browser-open-status"></div>
+    </div>
+
+    <button id="loadBtn" class="primary">Загрузить / обновить карту</button>
+    <button id="fitAcadBtn" disabled>Академгородок</button>
+    <button id="fitShlyuzBtn" disabled>Шлюз</button>
+    <button id="fitShchBtn" disabled>мкр. «Щ»</button>
+    <button id="fitLozhokBtn" disabled>Ложок</button>
+    <button id="fitAllBtn" disabled>Весь охват</button>
+    <button id="pngBtn" disabled>Скачать PNG текущей карты</button>
+
+    <h2>Фильтр по школе</h2>
+    <p class="small">Выберите школу: она останется яркой, остальные закрепленные дома станут полупрозрачными.</p>
+    <select id="schoolFilter" disabled>
+      <option value="all">Все школы</option>
+    </select>
+
+    <h2>Легенда и слои</h2>
+    <p class="small">Включайте и выключайте нужные школы и дополнительные элементы карты.</p>
+    <div id="layerToggles"></div>
+
+    <h2>Статус</h2>
+    <div id="sourceStatus" class="small">Источник еще не проверялся.</div>
+    <div id="status" class="small">Карта начнет загрузку автоматически. Подождите несколько секунд.</div>
+    <div id="mobileOpenHint" class="small"></div>
+
+    <h2>Статистика</h2>
+    <div id="stats"></div>
+
+    <h2>Дубли / конфликты</h2>
+    <p class="small">
+      Если один и тот же адрес формально подходит под правила нескольких школ, он будет отмечен черной обводкой
+      и попадет в таблицу ниже.
+    </p>
+    <div id="duplicates"></div>
+
+  </aside>
+
+  <div id="map"></div>
+
+  <div id="loadingOverlay">
+    <div id="loadingCard">
+      <div class="spinner"></div>
+      <div id="loadingTitle">Карта загружается</div>
+      <div id="loadingMessage">Загружаю карту, адреса и школы. Это может занять до минуты.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+if (typeof L === "undefined") {
+  const status = document.getElementById("status");
+  const hint = document.getElementById("mobileOpenHint");
+  if (status) {
+    status.innerHTML = '<div class="warn">Карта не смогла загрузить библиотеку отображения. Откройте файл в Safari, Chrome или другом обычном браузере.</div>';
+  }
+  if (hint) {
+    hint.innerHTML = 'На iPhone файл из Telegram иногда открывается во встроенном просмотрщике. Нажмите «Поделиться» и выберите «Открыть в Safari».';
+  }
+  throw new Error("Leaflet is not available");
+}
+const SCHOOLS = [
+  {
+    id: "gym3",
+    name: "Гимназия №3",
+    fullName: "МАОУ «Гимназия №3 в Академгородке»",
+    color: "#377eb8",
+    rules: [
+      {street: "улица Правды", houses: ["3", "4", "5", "5а", "6", "7", "7а", "9"]},
+      {street: "улица Терешковой", ranges: [{from: 2, to: 12, parity: "even"}, {from: 18, to: 28, parity: "even"}, {from: 1, to: 15, parity: "odd"}]},
+      {street: "проспект Академика Коптюга", ranges: [{from: 5, to: 19, parity: "any"}]},
+      {street: "Морской проспект", ranges: [{from: 4, to: 12, parity: "even"}], houses: ["14", "16", "18", "20", "28", "30", "32", "34", "36", "38", "40"]},
+      {street: "Детский проезд", houses: ["3", "4", "5", "7", "9"]}
+    ]
+  },
+  {
+    id: "gym5",
+    name: "Гимназия №5",
+    fullName: "МБОУ «Гимназия №5»",
+    color: "#4daf4a",
+    rules: [
+      {street: "Академическая улица", ranges: [{from: 12, to: 15, parity: "any"}, {from: 17, to: 25, parity: "any"}], houses: ["27", "29", "30", "34", "36", "38", "48"]},
+      {street: "Золотодолинская улица", ranges: [{from: 1, to: 9, parity: "odd"}], houses: ["13"]},
+      {street: "улица Терешковой", ranges: [{from: 31, to: 34, parity: "any"}], houses: ["36", "36а", "38", "40", "42", "44", "46", "48"]},
+      {street: "Морской проспект", ranges: [{from: 1, to: 21, parity: "odd"}]}
+    ]
+  },
+  {
+    id: "lic130",
+    name: "Лицей №130",
+    fullName: "МБОУ «Лицей №130 имени академика М. А. Лаврентьева»",
+    color: "#e41a1c",
+    rules: [
+      {street: "Академическая улица", ranges: [{from: 2, to: 10, parity: "even"}]},
+      {street: "улица Воеводского", all: true},
+      {street: "Золотодолинская улица", ranges: [{from: 15, to: 27, parity: "odd"}], houses: ["31", "31/1", "33", "35"]},
+      {street: "улица Мальцева", all: true},
+      {street: "улица Академика Трофимука", all: true},
+      {street: "улица Ученых", houses: ["3", "5", "6", "7", "8", "9"]},
+      {street: "Морской проспект", ranges: [{from: 27, to: 33, parity: "odd"}]}
+    ]
+  },
+  {
+    id: "integral",
+    name: "Лицей «Интеграл»",
+    fullName: "МАОУ Центр образования «Лицей ИНТЕГРАЛ»",
+    color: "#00bfc4",
+    rules: [
+      {street: "улица Боровая Партия", ranges: [{from: 1, to: 5, parity: "any", allowSuffix: true}, {from: 7, to: 9, parity: "any"}, {from: 13, to: 18, parity: "any"}], houses: ["11"]},
+      {street: "Васильковая улица", all: true},
+      {street: "Дорожная улица", all: true},
+      {street: "Жемчужная улица", all: true},
+      {street: "Зеленая улица", all: true},
+      {street: "улица Ильича", all: true},
+      {street: "улица Космонавтов", all: true},
+      {street: "Лесная улица", all: true},
+      {street: "улица Ляпунова", all: true},
+      {street: "улица Пирогова", all: true},
+      {street: "Рыбацкая улица", all: true},
+      {street: "Солнечногорская улица", all: true},
+      {street: "Черемушная улица", all: true},
+      {street: "Весенний проезд", all: true},
+      {street: "Цветной проезд", all: true},
+      {street: "Морской проспект", ranges: [{from: 42, to: 64, parity: "even"}]},
+      {street: "Университетский проспект", houses: ["2", "2к1", "2к2", "2 корпус 1", "2 корпус 2"]},
+      {street: "Васильковый переулок", all: true},
+      {street: "Комсомольский переулок", all: true},
+      {street: "Черемушный переулок", all: true},
+      {street: "Бердский тупик", all: true}
+    ]
+  },
+  {
+    id: "sch61",
+    name: "Школа №61",
+    fullName: "МБОУ «СОШ №61 имени Н. М. Иванова»",
+    color: "#984ea3",
+    rules: [
+      {street: "улица Героев Труда", all: true},
+      {street: "улица Гнесиных", all: true},
+      {street: "улица Иванова", houses: ["3", "5", "7", "8", "10", "11", "13", "14", "15", "16", "17", "18", "20", "22", "24", "27"]},
+      {street: "Истринская улица", all: true},
+      {street: "Разъездная улица", all: true},
+      {street: "Речкуновская улица", all: true},
+      {street: "Российская улица", houses: ["13", "13а", "15", "16", "17", "18", "19", "20", "22", "24", "26", "28", "35", "39", "41", "43"]},
+      {street: "Рубиновая улица", all: true},
+      {street: "проспект Строителей", all: true}
+    ]
+  },
+  {
+    id: "sch190",
+    name: "Школа №190",
+    fullName: "МБОУ «СОШ №190 имени В. Н. Потылицына»",
+    color: "#f1c40f",
+    rules: [
+      {street: "улица Арбузова", houses: ["1", "1а", "1б", "3", "5", "11"]},
+      {street: "улица Иванова", ranges: [{from: 26, to: 32, parity: "even", allowSuffix: true}], houses: ["33", "33а", "34", "35а", "37", "38", "39", "40", "41", "42", "43", "45", "47", "49/1", "49/2"]},
+      {street: "улица Мусы Джалиля", all: true},
+      {street: "Шатурская улица", all: true},
+      {street: "Российская улица", houses: ["3", "5/1", "8", "10", "12", "14", "21"]},
+      {street: "бульвар Молодежи", all: true}
+    ]
+  },
+  {
+    id: "gornostay",
+    name: "Гимназия №6 «Горностай»",
+    fullName: "МАОУ ОЦ «Гимназия №6 «Горностай»",
+    color: "#ff7f00",
+    rules: [
+      {street: "улица Арбузова", houses: ["8", "10", "12", "16"]},
+      {street: "Вяземская улица", all: true},
+      {street: "улица Демакова", all: true},
+      {street: "Океанская улица", all: true},
+      {street: "Полевая улица", all: true},
+      {street: "поселок Каинка", all: true},
+      {street: "бульвар Леонардо да Винчи", all: true, special: "lozhok"},
+      {street: "улица Тесла", all: true, special: "lozhok"},
+      {street: "улица Александра Флеминга", all: true, special: "lozhok"},
+      {street: "улица Гутенберга", all: true, special: "lozhok"},
+      {street: "улица Зворыкина", all: true, special: "lozhok"},
+      {street: "улица Калашникова", all: true, special: "lozhok"},
+      {street: "улица Кулибина", all: true, special: "lozhok"},
+      {street: "улица Нобеля", all: true, special: "lozhok"}
+    ]
+  },
+  {
+    id: "sch119",
+    name: "Школа №119",
+    fullName: "МБОУ «СОШ №119»",
+    color: "#a65628",
+    rules: [
+      {street: "Балтийская улица", houses: ["31", "35"]},
+      {street: "Русская улица", houses: ["3", "11", "11/1", "13", "21", "25", "31", "35/1"]},
+      {street: "улица Тружеников", houses: ["5", "7"]},
+      {street: "Добровольческая улица", houses: ["2"]},
+      {street: "улица Вахтангова", houses: ["2", "5", "5а", "22", "23", "24", "25", "34", "35", "39", "45"]},
+      {street: "Шлюзовая улица", houses: ["2", "4", "8", "14", "18", "20"]},
+      {street: "Сиреневая улица", houses: ["19", "23", "25", "27", "41"]},
+      {street: "2-я Миргородская улица", all: true},
+      {street: "Звенигородская улица", all: true},
+      {street: "улица Белоусова", all: true}
+    ]
+  },
+  {
+    id: "sch121",
+    name: "Школа №121",
+    fullName: "МБОУ «СОШ №121 «Академическая»",
+    color: "#f781bf",
+    rules: [
+      {street: "Балтийская улица", houses: ["23", "25", "27", "33"]},
+      {street: "улица Вахтангова", houses: ["3а"]},
+      {street: "улица Гидростроителей", all: true},
+      {street: "Добровольческая улица", houses: ["1", "4", "21", "22", "23", "33", "46"]},
+      {street: "Закарпатская улица", all: true},
+      {street: "Золоторожская улица", all: true},
+      {street: "Иноземная улица", all: true},
+      {street: "Русская улица", houses: ["5", "9", "19", "23", "27", "29", "33"]},
+      {street: "Сиреневая улица", houses: ["29", "33", "35", "37"]},
+      {street: "Тихая улица", all: true},
+      {street: "улица Тружеников", houses: ["5", "9", "12", "14"]},
+      {street: "Шлюзовая улица", houses: ["6", "10", "12", "16", "22", "24"]}
+    ]
+  }
+];
+
+const SCHOOL_FALLBACK_ADDRESSES = {
+  gym3: {street: "Детский проезд", house: "10", point: [54.85035, 83.09495]},
+  gym5: {street: "Академическая улица", house: "9", point: [54.84325, 83.09415]},
+  lic130: {street: "улица Ученых", house: "10", point: [54.84555, 83.09885]},
+  integral: {street: "Жемчужная улица", house: "16", point: [54.83555, 83.09160]},
+  sch61: {street: "улица Иванова", house: "9", point: [54.85145, 83.09245]},
+  sch190: {street: "улица Иванова", house: "36", point: [54.85445, 83.10175]},
+  gornostay: {street: "Вяземская улица", house: "4", point: [54.84940, 83.11185]},
+  sch119: {street: "улица Тружеников", house: "16а", point: [54.82725, 83.04595]},
+  sch121: {street: "улица Тружеников", house: "10", point: [54.82655, 83.04365]}
+};
+
+const OFFICIAL_SOURCE_URL = "https://school1sov.gosuslugi.ru/netcat_files/182/2824/Postanovlenie_o_zakreplenie_territoriy_26_27.pdf";
+
+const BBOX = {
+  south: 54.8000,
+  west: 83.0000,
+  north: 54.8950,
+  east: 83.2250
+};
+
+const REGION_BOUNDS = {
+  acad: L.latLngBounds([54.8310, 83.0750], [54.8655, 83.1235]),
+  shlyuz: L.latLngBounds([54.8205, 83.0230], [54.8395, 83.0570]),
+  shch: L.latLngBounds([54.8400, 83.0880], [54.8550, 83.1165]),
+  lozhok: L.latLngBounds([54.8550, 83.1650], [54.8810, 83.2200]),
+  all: L.latLngBounds([BBOX.south, BBOX.west], [BBOX.north, BBOX.east])
+};
+
+const map = L.map("map", {
+  preferCanvas: true,
+  zoomControl: true,
+  tap: true,
+  inertia: true,
+  worldCopyJump: false
+});
+map.fitBounds(REGION_BOUNDS.acad, {padding: [20, 20]});
+
+const backgroundLayer = L.layerGroup().addTo(map);
+const addressContextLayer = L.layerGroup().addTo(map);
+const schoolObjectsLayer = L.layerGroup().addTo(map);
+const conflictLayer = L.layerGroup().addTo(map);
+const labelLayer = L.layerGroup();
+const layers = Object.fromEntries(SCHOOLS.map(school => [school.id, L.layerGroup().addTo(map)]));
+
+const overlayLayers = {
+  "Карта: дороги, леса, вода": backgroundLayer,
+  "Адресные дома без закрепления": addressContextLayer,
+  "Школы": schoolObjectsLayer,
+  "Дубли / конфликты": conflictLayer
+};
+for (const school of SCHOOLS) {
+  overlayLayers[school.name] = layers[school.id];
+}
+const titleControl = L.control({position: "bottomright"});
+titleControl.onAdd = function () {
+  const div = L.DomUtil.create("div", "map-title");
+  div.innerHTML = "<b>Подомовая карта</b><br>цвет дома показывает школу закрепления";
+  return div;
+};
+titleControl.addTo(map);
+
+function isSmallScreen() {
+  return window.matchMedia("(max-width: 760px)").matches;
+}
+
+function updateMobileViewport() {
+  const height = window.innerHeight || document.documentElement.clientHeight || 650;
+  document.documentElement.style.setProperty("--app-height", height + "px");
+  setTimeout(() => map.invalidateSize({pan: false}), 120);
+}
+
+function maybeCollapsePanelOnMobile() {
+  if (!isSmallScreen()) {
+    return;
+  }
+  const sidebar = document.getElementById("sidebar");
+  if (!sidebar.classList.contains("collapsed")) {
+    sidebar.classList.add("collapsed");
+    document.getElementById("panelToggle").textContent = "+";
+    setTimeout(() => map.invalidateSize({pan: false}), 200);
+  }
+}
+
+function maybeExpandPanelOnMobile() {
+  if (!isSmallScreen()) {
+    return;
+  }
+  const sidebar = document.getElementById("sidebar");
+  if (sidebar.classList.contains("collapsed")) {
+    sidebar.classList.remove("collapsed");
+    document.getElementById("panelToggle").textContent = "−";
+    setTimeout(() => map.invalidateSize({pan: false}), 200);
+  }
+}
+
+function chromeUrlFromHttpUrl(url) {
+  if (url.startsWith("https://")) {
+    return "googlechromes://" + url.slice("https://".length);
+  }
+  if (url.startsWith("http://")) {
+    return "googlechrome://" + url.slice("http://".length);
+  }
+  return "";
+}
+
+function safariUrlFromHttpUrl(url) {
+  if (url.startsWith("https://")) {
+    return "x-safari-https://" + url.slice("https://".length);
+  }
+  return "";
+}
+
+function androidChromeIntentFromHttpUrl(url) {
+  if (!url.startsWith("https://") && !url.startsWith("http://")) {
+    return "";
+  }
+  const scheme = url.startsWith("https://") ? "https" : "http";
+  const withoutScheme = url.replace(/^https?:\/\//, "");
+  return "intent://" + withoutScheme + "#Intent;scheme=" + scheme + ";package=com.android.chrome;end";
+}
+
+function tryOpenExternalUrl(targetUrl) {
+  const link = document.createElement("a");
+  link.href = targetUrl;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  setTimeout(() => {
+    try {
+      window.location.href = targetUrl;
+    } catch (error) {
+      // Если контейнер Telegram запрещает переход по схеме, ниже покажем понятный статус.
+    }
+  }, 80);
+}
+
+function makeCurrentHtmlFile() {
+  const html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+  return new File([html], "akademgorodok_school_map.html", {type: "text/html"});
+}
+
+async function shareCurrentHtmlFile(status) {
+  if (!navigator.share || !navigator.canShare || typeof File === "undefined") {
+    return false;
+  }
+
+  const file = makeCurrentHtmlFile();
+  if (!navigator.canShare({files: [file]})) {
+    return false;
+  }
+
+  if (status) {
+    status.textContent = "Открываю системное окно. Выберите Safari, Chrome или сохранение в Файлы.";
+  }
+  await navigator.share({files: [file]});
+  return true;
+}
+
+async function openCurrentPageInBrowser() {
+  const status = document.getElementById("openBrowserStatus");
+  const currentUrl = window.location.href;
+  const userAgent = navigator.userAgent || "";
+  const isIos = /iPad|iPhone|iPod/.test(userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/i.test(userAgent);
+  const isHttpUrl = currentUrl.startsWith("https://") || currentUrl.startsWith("http://");
+  const isLocalUrl = currentUrl.startsWith("file:") || currentUrl.startsWith("blob:") || currentUrl.startsWith("data:");
+
+  if (status) {
+    status.textContent = "Пробую открыть карту в браузере...";
+  }
+
+  if (isIos && isHttpUrl) {
+    tryOpenExternalUrl("com-apple-mobilesafari-tab:" + currentUrl);
+    setTimeout(() => tryOpenExternalUrl(safariUrlFromHttpUrl(currentUrl)), 350);
+    setTimeout(() => tryOpenExternalUrl(chromeUrlFromHttpUrl(currentUrl)), 700);
+  } else if (isAndroid && isHttpUrl) {
+    tryOpenExternalUrl(androidChromeIntentFromHttpUrl(currentUrl));
+  } else if (isHttpUrl) {
+    window.open(currentUrl, "_blank", "noopener,noreferrer");
+  } else if (isLocalUrl || !isHttpUrl) {
+    if (isIos) {
+      tryOpenExternalUrl("com-apple-mobilesafari-tab:" + currentUrl);
+    }
+
+    setTimeout(async () => {
+      if (document.hidden) {
+        return;
+      }
+
+      try {
+        const shared = await shareCurrentHtmlFile(status);
+        if (shared) {
+          return;
+        }
+      } catch (error) {
+        // Некоторые встроенные просмотрщики не дают открыть системное окно; тогда пишем коротко ниже.
+      }
+
+      if (status) {
+        status.textContent = "Telegram не отдал локальный HTML во внешний браузер. Сохраните файл в Файлы и откройте его оттуда.";
+      }
+    }, 900);
+  }
+
+  setTimeout(() => {
+    if (document.hidden || !status || !isHttpUrl) {
+      return;
+    }
+    status.textContent = "Если браузер не открылся, этот просмотрщик блокирует внешний переход.";
+  }, 1600);
+}
+
+let assignedLayers = [];
+let assignedLabelLayers = [];
+let schoolObjectLayers = [];
+let renderedSchoolObjectIds = new Set();
+let selectedSchoolId = "all";
+let foundExplicitKeys = new Set();
+let foundRecordsBySchool = Object.fromEntries(SCHOOLS.map(school => [school.id, []]));
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>'"]/g, symbol => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#039;",
+    '"': "&quot;"
+  }[symbol]));
+}
+
+function normalizeStreet(value) {
+  if (!value) {
+    return "";
+  }
+
+  let text = String(value)
+    .toLowerCase()
+    .replaceAll("ё", "е")
+    .replace(/[.,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  text = text.replace(/^(ул|улица)\s+/g, "");
+  text = text.replace(/\s+(ул|улица)$/g, "");
+  text = text.replace(/^(проспект|пр-кт|пр т|пр)\s+/g, "");
+  text = text.replace(/\s+(проспект|пр-кт|пр т|пр)$/g, "");
+  text = text.replace(/^(бульвар|б-р)\s+/g, "");
+  text = text.replace(/\s+(бульвар|б-р)$/g, "");
+  text = text.replace(/^(проезд|пр-д)\s+/g, "");
+  text = text.replace(/\s+(проезд|пр-д)$/g, "");
+  text = text.replace(/^(переулок|пер)\s+/g, "");
+  text = text.replace(/\s+(переулок|пер)$/g, "");
+  text = text.replace(/^(поселок|поселок|п)\s+/g, "");
+  text = text.replace(/\s+(поселок|поселок|п)$/g, "");
+  text = text.replace(/\s+/g, " ").trim();
+
+  return text;
+}
+
+function normalizeHouse(value) {
+  if (!value) {
+    return "";
+  }
+  return String(value)
+    .toLowerCase()
+    .replaceAll("ё", "е")
+    .replace(/№/g, "")
+    .replace(/д\./g, "")
+    .replace(/дом/g, "")
+    .replace(/\s+/g, "")
+    .replace(/корпус/g, "к")
+    .replace(/строение/g, "с")
+    .replace(/литера/g, "")
+    .replace(/-/g, "/")
+    .trim();
+}
+
+function houseBaseNumber(house) {
+  const match = normalizeHouse(house).match(/^(\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
+function houseHasSuffix(house) {
+  return /[а-яa-z/]/i.test(normalizeHouse(house).replace(/^\d+/, ""));
+}
+
+function sameHouse(a, b) {
+  return normalizeHouse(a) === normalizeHouse(b);
+}
+
+function explicitKey(street, house) {
+  return normalizeStreet(street) + "|" + normalizeHouse(house);
+}
+
+function displayAddress(address) {
+  return [address.street, address.house].filter(Boolean).join(", ");
+}
+
+function sameAddress(address, expectedAddress) {
+  return normalizeStreet(address.street) === normalizeStreet(expectedAddress.street)
+    && normalizeHouse(address.house) === normalizeHouse(expectedAddress.house);
+}
+
+function getAddressFromTags(tags) {
+  const house = tags["addr:housenumber"] || tags["addr:housename"] || "";
+  const street = tags["addr:street"] || tags["addr:place"] || tags["addr:suburb"] || "";
+  if (!house || !street) {
+    return null;
+  }
+  return {street, house};
+}
+
+function matchRule(rule, street, house) {
+  const normalizedStreet = normalizeStreet(street);
+  const normalizedRuleStreet = normalizeStreet(rule.street);
+  if (normalizedStreet !== normalizedRuleStreet) {
+    return false;
+  }
+
+  if (rule.all) {
+    return true;
+  }
+
+  const normalizedHouse = normalizeHouse(house);
+
+  if (rule.houses && rule.houses.some(item => sameHouse(item, normalizedHouse))) {
+    return true;
+  }
+
+  const base = houseBaseNumber(normalizedHouse);
+  if (base === null || !rule.ranges) {
+    return false;
+  }
+
+  const suffix = houseHasSuffix(normalizedHouse);
+  for (const range of rule.ranges) {
+    if (base < range.from || base > range.to) {
+      continue;
+    }
+    if (suffix && !range.allowSuffix) {
+      continue;
+    }
+    if (range.parity === "even" && base % 2 !== 0) {
+      continue;
+    }
+    if (range.parity === "odd" && base % 2 !== 1) {
+      continue;
+    }
+    return true;
+  }
+
+  return false;
+}
+
+function classifyAddress(address) {
+  const matches = [];
+  for (const school of SCHOOLS) {
+    for (const rule of school.rules) {
+      if (matchRule(rule, address.street, address.house)) {
+        matches.push({school, rule});
+        break;
+      }
+    }
+  }
+  return matches;
+}
+
+function buildExpectedExplicitList() {
+  const items = [];
+  for (const school of SCHOOLS) {
+    for (const rule of school.rules) {
+      if (!rule.houses) {
+        continue;
+      }
+      for (const house of rule.houses) {
+        items.push({school, street: rule.street, house, key: explicitKey(rule.street, house)});
+      }
+    }
+  }
+  return items;
+}
+
+const EXPECTED_EXPLICIT = buildExpectedExplicitList();
+
+function overpassAddressQuery() {
+  return `
+[out:json][timeout:90];
+(
+  node["addr:housenumber"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
+  way["addr:housenumber"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
+  relation["addr:housenumber"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
+);
+out body center geom;
+  `.trim();
+}
+
+function overpassBackgroundQuery() {
+  return `
+[out:json][timeout:90];
+(
+  way["highway"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
+  way["railway"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
+  way["waterway"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
+  way["natural"="water"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
+  way["landuse"~"forest|residential|retail|industrial|commercial|grass|meadow|cemetery"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
+  way["leisure"~"park|garden|sports_centre|pitch"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
+  way["building"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
+);
+out body geom;
+  `.trim();
+}
+
+function overpassSchoolsQuery() {
+  return `
+[out:json][timeout:90];
+(
+  node["amenity"="school"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
+  way["amenity"="school"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
+  relation["amenity"="school"](${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east});
+);
+out body center geom;
+  `.trim();
+}
+
+async function fetchOverpassWithFallback(query) {
+  const endpoints = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
+  ];
+  let lastError = null;
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"},
+        body: "data=" + encodeURIComponent(query)
+      });
+      if (!response.ok) {
+        throw new Error(endpoint + " вернул HTTP " + response.status);
+      }
+      return await response.json();
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("Не удалось обратиться к Overpass API");
+}
+
+function elementGeometry(element) {
+  if (element.type === "node" && element.lat !== undefined && element.lon !== undefined) {
+    return {type: "point", point: [element.lat, element.lon], coords: [[element.lat, element.lon]]};
+  }
+  if (element.geometry && element.geometry.length > 0) {
+    const coords = element.geometry.map(item => [item.lat, item.lon]);
+    return {type: "line", point: centerOfCoords(coords), coords};
+  }
+  if (element.center) {
+    return {type: "point", point: [element.center.lat, element.center.lon], coords: [[element.center.lat, element.center.lon]]};
+  }
+  if (element.members) {
+    for (const member of element.members) {
+      if (member.geometry && member.geometry.length > 0) {
+        const coords = member.geometry.map(item => [item.lat, item.lon]);
+        return {type: "line", point: centerOfCoords(coords), coords};
+      }
+    }
+  }
+  return null;
+}
+
+function centerOfCoords(coords) {
+  let lat = 0;
+  let lon = 0;
+  for (const coord of coords) {
+    lat += coord[0];
+    lon += coord[1];
+  }
+  return [lat / coords.length, lon / coords.length];
+}
+
+function isClosed(coords) {
+  if (!coords || coords.length < 4) {
+    return false;
+  }
+  const first = coords[0];
+  const last = coords[coords.length - 1];
+  return Math.abs(first[0] - last[0]) < 1e-10 && Math.abs(first[1] - last[1]) < 1e-10;
+}
+
+function isInBounds(point, bounds) {
+  return bounds.contains(L.latLng(point[0], point[1]));
+}
+
+function clearLayers() {
+  backgroundLayer.clearLayers();
+  addressContextLayer.clearLayers();
+  schoolObjectsLayer.clearLayers();
+  conflictLayer.clearLayers();
+  labelLayer.clearLayers();
+  for (const layer of Object.values(layers)) {
+    layer.clearLayers();
+  }
+  assignedLayers = [];
+  assignedLabelLayers = [];
+  schoolObjectLayers = [];
+  renderedSchoolObjectIds = new Set();
+  foundExplicitKeys = new Set();
+  foundRecordsBySchool = Object.fromEntries(SCHOOLS.map(school => [school.id, []]));
+}
+
+function renderBackground(elements) {
+  const maxElements = 18000;
+  for (const element of elements.slice(0, maxElements)) {
+    const tags = element.tags || {};
+    const geom = elementGeometry(element);
+    if (!geom || geom.coords.length < 2) {
+      continue;
+    }
+
+    let layer = null;
+    if (tags.natural === "water" || tags.waterway) {
+      layer = isClosed(geom.coords)
+        ? L.polygon(geom.coords, {color: "#9ecae1", weight: 1, fillColor: "#d7eef8", fillOpacity: 0.85, interactive: false})
+        : L.polyline(geom.coords, {color: "#8ecae6", weight: 1.4, opacity: 0.75, interactive: false});
+    } else if (tags.landuse === "forest" || tags.leisure === "park" || tags.leisure === "garden") {
+      if (isClosed(geom.coords)) {
+        layer = L.polygon(geom.coords, {color: "#b7d7a8", weight: 0.5, fillColor: "#d9ead3", fillOpacity: 0.65, interactive: false});
+      }
+    } else if (tags.landuse) {
+      if (isClosed(geom.coords)) {
+        layer = L.polygon(geom.coords, {color: "#e0d8c8", weight: 0.5, fillColor: "#f2eee6", fillOpacity: 0.35, interactive: false});
+      }
+    } else if (tags.highway) {
+      const weight = tags.highway === "primary" || tags.highway === "secondary" ? 2.2 : 1.3;
+      layer = L.polyline(geom.coords, {color: "#d0a15f", weight, opacity: 0.8, interactive: false});
+    } else if (tags.railway) {
+      layer = L.polyline(geom.coords, {color: "#999", weight: 1.2, dashArray: "4 4", opacity: 0.75, interactive: false});
+    } else if (tags.building) {
+      if (isClosed(geom.coords)) {
+        layer = L.polygon(geom.coords, {color: "#c5c5c5", weight: 0.4, fillColor: "#f5f5f5", fillOpacity: 0.55, interactive: false});
+      }
+    }
+
+    if (layer) {
+      backgroundLayer.addLayer(layer);
+    }
+  }
+}
+
+function renderAddressContext(elements) {
+  for (const element of elements) {
+    const tags = element.tags || {};
+    const address = getAddressFromTags(tags);
+    const geom = elementGeometry(element);
+    if (!address || !geom) {
+      continue;
+    }
+    const matches = classifyAddress(address);
+    if (matches.length !== 0) {
+      continue;
+    }
+    if (geom.coords.length >= 4 && isClosed(geom.coords)) {
+      const layer = L.polygon(geom.coords, {
+        color: "#bdbdbd",
+        weight: 0.4,
+        fillColor: "#d9d9d9",
+        fillOpacity: 0.12,
+        interactive: false
+      });
+      addressContextLayer.addLayer(layer);
+    }
+  }
+}
+
+function normalizeSchoolObjectName(value) {
+  return normalizeStreet(value || "").replace(/["«»]/g, "");
+}
+
+function matchSchoolObjectToSchool(tags) {
+  const name = normalizeSchoolObjectName(tags.name || tags["official_name"] || "");
+  const officialName = normalizeSchoolObjectName(tags["official_name"] || tags.name || "");
+  const text = (name + " " + officialName).trim();
+
+  if (!text) {
+    return null;
+  }
+  if (text.includes("интеграл")) {
+    return SCHOOLS.find(school => school.id === "integral");
+  }
+  if (text.includes("горностай") || /(^|\D)6($|\D)/.test(text)) {
+    return SCHOOLS.find(school => school.id === "gornostay");
+  }
+  if (/130/.test(text)) {
+    return SCHOOLS.find(school => school.id === "lic130");
+  }
+  if (/190/.test(text)) {
+    return SCHOOLS.find(school => school.id === "sch190");
+  }
+  if (/119/.test(text)) {
+    return SCHOOLS.find(school => school.id === "sch119");
+  }
+  if (/121/.test(text)) {
+    return SCHOOLS.find(school => school.id === "sch121");
+  }
+  if (/61/.test(text)) {
+    return SCHOOLS.find(school => school.id === "sch61");
+  }
+  if (text.includes("гимназ") && /(^|\D)3($|\D)/.test(text)) {
+    return SCHOOLS.find(school => school.id === "gym3");
+  }
+  if (text.includes("гимназ") && /(^|\D)5($|\D)/.test(text)) {
+    return SCHOOLS.find(school => school.id === "gym5");
+  }
+
+  return null;
+}
+
+function rememberSchoolObjectLayer(layer, school, baseStyle) {
+  layer._schoolIds = [school.id];
+  layer._baseStyle = {...baseStyle};
+  layer._baseRadius = baseStyle.radius;
+  schoolObjectLayers.push(layer);
+}
+
+function addSchoolObjectLabel(point, school) {
+  return;
+}
+
+function schoolObjectPopupHtml(tags, school) {
+  const name = tags.name || tags["official_name"] || school.fullName;
+  const addressParts = [
+    tags["addr:street"],
+    tags["addr:housenumber"]
+  ].filter(Boolean);
+  const addressText = addressParts.length > 0
+    ? `<br><span class="small">${escapeHtml(addressParts.join(", "))}</span>`
+    : "";
+
+  return `
+    <div class="popup-title">${escapeHtml(name)}</div>
+    <div><span style="display:inline-block;width:11px;height:11px;background:${school.color};border:1px solid #222;border-radius:50%"></span> ${escapeHtml(school.fullName)}</div>
+    ${addressText}
+  `;
+}
+
+function renderSchoolObjects(elements) {
+  for (const element of elements) {
+    const tags = element.tags || {};
+    const school = matchSchoolObjectToSchool(tags);
+    const geom = elementGeometry(element);
+    if (!school || !geom || renderedSchoolObjectIds.has(school.id)) {
+      continue;
+    }
+
+    const popup = schoolObjectPopupHtml(tags, school);
+    renderedSchoolObjectIds.add(school.id);
+    if (geom.coords.length >= 4 && isClosed(geom.coords)) {
+      const polygonStyle = {
+        color: "#111111",
+        weight: 2.3,
+        fillColor: school.color,
+        fillOpacity: 0.24,
+        opacity: 1.0,
+        dashArray: "5 3"
+      };
+      const polygon = L.polygon(geom.coords, polygonStyle);
+      polygon.bindPopup(popup);
+      polygon.bindTooltip(`${escapeHtml(school.name)}<br><b>здание школы</b>`, {sticky: true});
+      polygon.on("click", () => polygon.openPopup());
+      schoolObjectsLayer.addLayer(polygon);
+      rememberSchoolObjectLayer(polygon, school, polygonStyle);
+    }
+
+    const markerStyle = {
+      radius: 11,
+      color: "#111111",
+      weight: 2.4,
+      fillColor: school.color,
+      fillOpacity: 1.0,
+      opacity: 1.0
+    };
+    const marker = L.circleMarker(geom.point, markerStyle);
+    marker.bindPopup(popup);
+    marker.on("click", () => marker.openPopup());
+    schoolObjectsLayer.addLayer(marker);
+    rememberSchoolObjectLayer(marker, school, markerStyle);
+    addSchoolObjectLabel(geom.point, school);
+  }
+}
+
+function renderSchoolFallbackObjects(elements) {
+  for (const school of SCHOOLS) {
+    if (renderedSchoolObjectIds.has(school.id)) {
+      continue;
+    }
+
+    const expectedAddress = SCHOOL_FALLBACK_ADDRESSES[school.id];
+    if (!expectedAddress) {
+      continue;
+    }
+
+    let rendered = false;
+    for (const element of elements) {
+      const tags = element.tags || {};
+      const address = getAddressFromTags(tags);
+      const geom = elementGeometry(element);
+      if (!address || !geom || !sameAddress(address, expectedAddress)) {
+        continue;
+      }
+
+      const fallbackTags = {
+        ...tags,
+        name: school.fullName,
+        "addr:street": address.street,
+        "addr:housenumber": address.house
+      };
+      const popup = schoolObjectPopupHtml(fallbackTags, school);
+
+      if (geom.coords.length >= 4 && isClosed(geom.coords)) {
+        const polygonStyle = {
+          color: "#111111",
+          weight: 2.3,
+          fillColor: school.color,
+          fillOpacity: 0.24,
+          opacity: 1.0,
+          dashArray: "5 3"
+        };
+        const polygon = L.polygon(geom.coords, polygonStyle);
+        polygon.bindPopup(popup);
+        polygon.bindTooltip(`${escapeHtml(school.name)}<br><b>здание школы</b>`, {sticky: true});
+        polygon.on("click", () => polygon.openPopup());
+        schoolObjectsLayer.addLayer(polygon);
+        rememberSchoolObjectLayer(polygon, school, polygonStyle);
+      }
+
+      const markerStyle = {
+        radius: 11,
+        color: "#111111",
+        weight: 2.4,
+        fillColor: school.color,
+        fillOpacity: 1.0,
+        opacity: 1.0
+      };
+      const marker = L.circleMarker(geom.point, markerStyle);
+      marker.bindPopup(popup);
+      marker.on("click", () => marker.openPopup());
+      schoolObjectsLayer.addLayer(marker);
+      rememberSchoolObjectLayer(marker, school, markerStyle);
+      addSchoolObjectLabel(geom.point, school);
+      renderedSchoolObjectIds.add(school.id);
+      rendered = true;
+      break;
+    }
+
+    if (!rendered && expectedAddress.point) {
+      const fallbackTags = {
+        name: school.fullName,
+        "addr:street": expectedAddress.street,
+        "addr:housenumber": expectedAddress.house
+      };
+      const popup = schoolObjectPopupHtml(fallbackTags, school);
+      const markerStyle = {
+        radius: 11,
+        color: "#111111",
+        weight: 2.4,
+        fillColor: school.color,
+        fillOpacity: 1.0,
+        opacity: 1.0
+      };
+      const marker = L.circleMarker(expectedAddress.point, markerStyle);
+      marker.bindPopup(popup);
+      marker.on("click", () => marker.openPopup());
+      schoolObjectsLayer.addLayer(marker);
+      rememberSchoolObjectLayer(marker, school, markerStyle);
+      addSchoolObjectLabel(expectedAddress.point, school);
+      renderedSchoolObjectIds.add(school.id);
+    }
+  }
+}
+
+function setLoading(visible, message) {
+  const overlay = document.getElementById("loadingOverlay");
+  const messageElement = document.getElementById("loadingMessage");
+  if (message) {
+    messageElement.textContent = message;
+  }
+  overlay.classList.toggle("visible", visible);
+}
+
+async function checkOfficialSource() {
+  const status = document.getElementById("sourceStatus");
+  const link = document.getElementById("officialSourceLink");
+  link.href = OFFICIAL_SOURCE_URL;
+  status.innerHTML = "Проверяю источник правил...";
+
+  try {
+    await fetch(OFFICIAL_SOURCE_URL, {
+      method: "GET",
+      mode: "no-cors",
+      cache: "no-store"
+    });
+    status.innerHTML = `
+      <div class="note">
+        Источник правил доступен. Адреса, здания и дороги на карте загружаются заново при каждом открытии.
+      </div>
+    `;
+  } catch (error) {
+    status.innerHTML = `
+      <div class="warn">
+        Источник правил сейчас недоступен из браузера. Карта продолжит работу по сохраненной таблице правил
+        и свежим данным OpenStreetMap.
+      </div>
+    `;
+  }
+}
+
+function schoolIdsFromMatches(matches) {
+  return matches.map(match => match.school.id);
+}
+
+function rememberAssignedLayer(layer, matches, baseStyle) {
+  layer._schoolIds = schoolIdsFromMatches(matches);
+  layer._baseStyle = {...baseStyle};
+  layer._baseRadius = baseStyle.radius;
+  assignedLayers.push(layer);
+}
+
+function rememberAssignedLabel(label, matches) {
+  label._schoolIds = schoolIdsFromMatches(matches);
+  label.on("add", () => updateLabelFilter(label));
+  assignedLabelLayers.push(label);
+}
+
+function matchesSelectedSchool(layer) {
+  return selectedSchoolId === "all" || (layer._schoolIds || []).includes(selectedSchoolId);
+}
+
+function applyLayerFilter(layer) {
+  const isSelected = matchesSelectedSchool(layer);
+  const baseStyle = layer._baseStyle || {};
+
+  if (layer.setStyle) {
+    if (isSelected) {
+      layer.setStyle(baseStyle);
+    } else {
+      layer.setStyle({
+        ...baseStyle,
+        weight: Math.max(0.8, (baseStyle.weight || 1.0) * 0.55),
+        opacity: 0.18,
+        fillOpacity: Math.min(baseStyle.fillOpacity || 0.42, 0.08)
+      });
+    }
+  }
+
+  if (layer.setRadius && layer._baseRadius !== undefined) {
+    layer.setRadius(isSelected ? layer._baseRadius : Math.max(4, layer._baseRadius - 3));
+  }
+
+  if (isSelected && selectedSchoolId !== "all" && layer.bringToFront) {
+    layer.bringToFront();
+  }
+
+}
+
+function updateLabelFilter(label) {
+  const element = label.getElement ? label.getElement() : null;
+  if (!element) {
+    return;
+  }
+  element.style.opacity = matchesSelectedSchool(label) ? "1" : "0.12";
+}
+
+function updateBoundTooltipFilter(layer) {
+  const tooltip = layer.getTooltip ? layer.getTooltip() : null;
+  const element = tooltip && tooltip.getElement ? tooltip.getElement() : null;
+  if (!element) {
+    return;
+  }
+  element.style.opacity = matchesSelectedSchool(layer) ? "1" : "0.12";
+}
+
+function applySchoolFilter() {
+  for (const layer of assignedLayers) {
+    applyLayerFilter(layer);
+  }
+  for (const layer of schoolObjectLayers) {
+    if (layer.setStyle || layer.setRadius) {
+      applyLayerFilter(layer);
+    } else {
+      updateLabelFilter(layer);
+    }
+  }
+  for (const label of assignedLabelLayers) {
+    updateLabelFilter(label);
+  }
+}
+
+function renderSchoolFilter() {
+  const select = document.getElementById("schoolFilter");
+  select.innerHTML = '<option value="all">Все школы</option>' + SCHOOLS.map(school => (
+    `<option value="${escapeHtml(school.id)}">${escapeHtml(school.name)}</option>`
+  )).join("");
+}
+
+function renderLayerToggles() {
+  const container = document.getElementById("layerToggles");
+  const entries = Object.entries(overlayLayers);
+  container.innerHTML = entries.map(([name, layer], index) => {
+    const checked = map.hasLayer(layer) ? "checked" : "";
+    const school = SCHOOLS.find(item => item.name === name);
+    let color = "transparent";
+    let border = "#bbb";
+    if (school) {
+      color = school.color;
+      border = "#333";
+    } else if (name === "Дубли / конфликты") {
+      color = "#ffffff";
+      border = "#000";
+    } else if (name === "Адресные дома без закрепления") {
+      color = "#d9d9d9";
+      border = "#bbb";
+    } else if (name === "Школы") {
+      color = "#ffffff";
+      border = "#111";
+    }
+
+    return `
+      <label class="layer-toggle-row">
+        <input type="checkbox" id="layerToggle${index}" data-layer-index="${index}" ${checked}>
+        <span class="layer-toggle-color" style="background:${color};border-color:${border}"></span>
+        <span>${escapeHtml(name)}</span>
+      </label>
+    `;
+  }).join("");
+
+  container.querySelectorAll("input[data-layer-index]").forEach(input => {
+    input.addEventListener("change", event => {
+      const index = Number(event.target.dataset.layerIndex);
+      const layer = entries[index][1];
+      if (event.target.checked) {
+        map.addLayer(layer);
+      } else {
+        map.removeLayer(layer);
+      }
+      applySchoolFilter();
+    });
+  });
+}
+
+function renderAssignedAddress(element, address, matches) {
+  const geom = elementGeometry(element);
+  if (!geom) {
+    return;
+  }
+
+  const isConflict = matches.length > 1;
+  const school = isConflict ? null : matches[0].school;
+  const layerGroup = isConflict ? conflictLayer : layers[school.id];
+  const color = isConflict ? "#000000" : school.color;
+  const fillColor = isConflict ? "#ffffff" : school.color;
+  const popup = popupHtml(address, matches, isConflict);
+  const tooltip = tooltipHtml(address, matches, isConflict);
+
+  if (geom.coords.length >= 4 && isClosed(geom.coords)) {
+    const polygonStyle = {
+      color,
+      weight: isConflict ? 3.4 : 2.8,
+      fillColor,
+      fillOpacity: isConflict ? 0.35 : 0.42,
+      opacity: 1.0
+    };
+    const polygon = L.polygon(geom.coords, polygonStyle);
+    polygon.bindPopup(popup);
+    polygon.bindTooltip(tooltip, {sticky: true});
+    polygon.on("click", () => polygon.openPopup());
+    layerGroup.addLayer(polygon);
+    rememberAssignedLayer(polygon, matches, polygonStyle);
+  }
+
+  const markerStyle = {
+    radius: isConflict ? 9 : 8,
+    color: isConflict ? "#000000" : "#222222",
+    weight: isConflict ? 3.2 : 1.6,
+    fillColor,
+    fillOpacity: isConflict ? 1.0 : 0.97,
+    opacity: 1.0
+  };
+  const marker = L.circleMarker(geom.point, markerStyle);
+  marker.bindPopup(popup);
+  marker.bindTooltip(tooltip, {sticky: true});
+  marker.on("click", () => marker.openPopup());
+  layerGroup.addLayer(marker);
+  rememberAssignedLayer(marker, matches, markerStyle);
+
+}
+
+function shortLabel(address, matches, isConflict) {
+  const schoolText = isConflict ? "конфликт" : matches[0].school.name.replace("Гимназия ", "Гимн. ").replace("Школа ", "Шк. ").replace("Лицей ", "Лиц. ");
+  return `${address.house} → ${schoolText}`;
+}
+
+function popupHtml(address, matches, conflict) {
+  const schoolsHtml = matches.map(match => {
+    const note = match.rule.special === "lozhok"
+      ? " <span style='color:#b00000'>(пометка по Ложку / Горкам Академпарка)</span>"
+      : "";
+    return `<li><span style="display:inline-block;width:11px;height:11px;background:${match.school.color};border:1px solid #222;border-radius:50%"></span> ${escapeHtml(match.school.fullName)}${note}</li>`;
+  }).join("");
+
+  return `
+    <div class="popup-title">${escapeHtml(displayAddress(address))}</div>
+    <div>${conflict ? "<b>Конфликт правил:</b> адрес подходит к нескольким школам." : "Закрепление:"}</div>
+    <ul style="margin:6px 0 0 18px;padding:0">${schoolsHtml}</ul>
+  `;
+}
+
+function tooltipHtml(address, matches, conflict) {
+  const schoolText = conflict
+    ? "конфликт правил"
+    : matches.map(match => match.school.name).join(", ");
+  return `${escapeHtml(displayAddress(address))}<br><b>${escapeHtml(schoolText)}</b>`;
+}
+
+function recordFound(address, matches) {
+  for (const match of matches) {
+    const item = {
+      address: displayAddress(address),
+      school: match.school,
+      special: match.rule.special || ""
+    };
+    foundRecordsBySchool[match.school.id].push(item);
+  }
+}
+
+function collectExplicit(address, matches) {
+  for (const match of matches) {
+    const rule = match.rule;
+    if (!rule.houses) {
+      continue;
+    }
+    foundExplicitKeys.add(explicitKey(rule.street, address.house));
+  }
+}
+
+function renderStats(stats, duplicates) {
+  const rows = SCHOOLS.map(school => `
+    <tr>
+      <td><span class="legend-color" style="background:${school.color}"></span> ${escapeHtml(school.name)}</td>
+      <td>${stats[school.id].count}</td>
+    </tr>
+  `).join("");
+
+  document.getElementById("stats").innerHTML = `
+    <table class="stats">
+      <tr><th>Школа</th><th>Найдено домов</th></tr>
+      ${rows}
+      <tr><th>Дубли / конфликты</th><th>${duplicates.length}</th></tr>
+    </table>
+  `;
+}
+
+function renderFoundPreview() {
+  const foundPreview = document.getElementById("foundPreview");
+  if (!foundPreview) {
+    return;
+  }
+  let html = "<table class='stats'><tr><th>Школа</th><th>Первые найденные адреса</th></tr>";
+  for (const school of SCHOOLS) {
+    const records = foundRecordsBySchool[school.id].slice(0, 12);
+    const text = records.length
+      ? records.map(item => escapeHtml(item.address)).join("<br>")
+      : "—";
+    html += `<tr><td>${escapeHtml(school.name)}</td><td>${text}</td></tr>`;
+  }
+  html += "</table>";
+  foundPreview.innerHTML = html;
+}
+
+function renderDuplicates(duplicates) {
+  if (duplicates.length === 0) {
+    document.getElementById("duplicates").innerHTML = "<p class='small'>Дублей по текущим правилам не найдено.</p>";
+    return;
+  }
+
+  const rows = duplicates.map(item => `
+    <tr>
+      <td>${escapeHtml(displayAddress(item.address))}</td>
+      <td>${item.matches.map(match => escapeHtml(match.school.name)).join("<br>")}</td>
+    </tr>
+  `).join("");
+
+  document.getElementById("duplicates").innerHTML = `
+    <table class="stats">
+      <tr><th>Адрес</th><th>Подходит к школам</th></tr>
+      ${rows}
+    </table>
+  `;
+}
+
+function renderMissing() {
+  const missingElement = document.getElementById("missing");
+  if (!missingElement) {
+    return;
+  }
+  const missing = EXPECTED_EXPLICIT.filter(item => !foundExplicitKeys.has(item.key));
+  if (missing.length === 0) {
+    missingElement.innerHTML = "<p class='small'>Все явно заданные адреса нашлись на карте.</p>";
+    return;
+  }
+
+  const rows = missing.slice(0, 200).map(item => `
+    <tr>
+      <td>${escapeHtml(item.street)}, ${escapeHtml(item.house)}</td>
+      <td>${escapeHtml(item.school.name)}</td>
+    </tr>
+  `).join("");
+  const tail = missing.length > 200 ? `<p class='small'>Показаны первые 200 из ${missing.length}.</p>` : "";
+
+  missingElement.innerHTML = `
+    <table class="stats">
+      <tr><th>Адрес</th><th>Школа</th></tr>
+      ${rows}
+    </table>
+    ${tail}
+  `;
+}
+
+function renderLegend() {
+  const legend = document.getElementById("legend");
+  if (!legend) {
+    return;
+  }
+  legend.innerHTML = "";
+}
+
+function enableButtons() {
+  document.getElementById("fitAcadBtn").disabled = false;
+  document.getElementById("fitShlyuzBtn").disabled = false;
+  document.getElementById("fitShchBtn").disabled = false;
+  document.getElementById("fitLozhokBtn").disabled = false;
+  document.getElementById("fitAllBtn").disabled = false;
+  document.getElementById("pngBtn").disabled = false;
+  document.getElementById("schoolFilter").disabled = false;
+}
+
+function fitRegion(regionId) {
+  const bounds = REGION_BOUNDS[regionId];
+  if (!bounds) {
+    return;
+  }
+  map.fitBounds(bounds, {padding: [24, 24]});
+}
+
+function fitAssigned() {
+  if (assignedLayers.length === 0) {
+    fitRegion("all");
+    return;
+  }
+  const group = L.featureGroup(assignedLayers);
+  map.fitBounds(group.getBounds().pad(0.12), {maxZoom: 16});
+}
+
+async function loadAndRender() {
+  const status = document.getElementById("status");
+  const loadBtn = document.getElementById("loadBtn");
+  loadBtn.disabled = true;
+  status.innerHTML = "Загружаю карту и адреса...";
+  setLoading(true, "Загружаю карту, адреса и школы. Это может занять до минуты.");
+  maybeCollapsePanelOnMobile();
+  clearLayers();
+
+  try {
+    await checkOfficialSource();
+
+    const [backgroundData, addressData, schoolsData] = await Promise.all([
+      fetchOverpassWithFallback(overpassBackgroundQuery()),
+      fetchOverpassWithFallback(overpassAddressQuery()),
+      fetchOverpassWithFallback(overpassSchoolsQuery())
+    ]);
+
+    renderBackground(backgroundData.elements || []);
+    renderAddressContext(addressData.elements || []);
+    renderSchoolObjects(schoolsData.elements || []);
+    renderSchoolFallbackObjects(addressData.elements || []);
+
+    const stats = Object.fromEntries(SCHOOLS.map(school => [school.id, {count: 0}]));
+    const duplicates = [];
+    let assignedCount = 0;
+    let addressCount = 0;
+
+    for (const element of (addressData.elements || [])) {
+      const tags = element.tags || {};
+      const address = getAddressFromTags(tags);
+      if (!address) {
+        continue;
+      }
+      addressCount += 1;
+      const matches = classifyAddress(address);
+      if (matches.length === 0) {
+        continue;
+      }
+
+      assignedCount += 1;
+      if (matches.length > 1) {
+        duplicates.push({address, matches});
+      }
+
+      for (const match of matches) {
+        stats[match.school.id].count += 1;
+      }
+      recordFound(address, matches);
+      collectExplicit(address, matches);
+      renderAssignedAddress(element, address, matches);
+    }
+
+    renderStats(stats, duplicates);
+    renderFoundPreview();
+    renderDuplicates(duplicates);
+    renderMissing();
+    enableButtons();
+    applySchoolFilter();
+    fitRegion("acad");
+    maybeCollapsePanelOnMobile();
+
+    if (assignedCount === 0) {
+      status.innerHTML = `
+        <div class="warn">
+          Загружено адресов на карте: ${addressCount}, но ни один не сопоставился с правилами.
+          Проверьте источник правил или повторите загрузку позже.
+        </div>
+      `;
+    } else {
+      status.innerHTML = `
+        <div class="ok">
+          Готово. Найдено адресов на карте: ${addressCount}. Закреплено за школами: ${assignedCount}.
+          По кнопкам выше можно перейти к Академгородку, Шлюзу, мкр. «Щ», Ложку или всему охвату.
+        </div>
+      `;
+    }
+  } catch (error) {
+    maybeExpandPanelOnMobile();
+    const hint = window.location.protocol === "file:"
+      ? " Если файл открыт из Telegram на iPhone, попробуйте открыть его через Safari или Chrome."
+      : "";
+    status.innerHTML = `<div class="warn">Ошибка загрузки: ${escapeHtml(error.message || error)}. Попробуйте еще раз через минуту.${hint}</div>`;
+  } finally {
+    loadBtn.disabled = false;
+    setLoading(false);
+  }
+}
+
+async function downloadPng() {
+  const sidebar = document.getElementById("sidebar");
+  const wasCollapsed = sidebar.classList.contains("collapsed");
+  sidebar.classList.add("collapsed");
+  await new Promise(resolve => setTimeout(resolve, 250));
+
+  const canvas = await html2canvas(document.getElementById("map"), {
+    useCORS: true,
+    backgroundColor: "#edf1f5",
+    scale: 2
+  });
+
+  if (!wasCollapsed) {
+    sidebar.classList.remove("collapsed");
+  }
+
+  const link = document.createElement("a");
+  link.download = "akademgorodok_school_house_level_vector_map.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
+document.getElementById("panelToggle").addEventListener("click", () => {
+  const sidebar = document.getElementById("sidebar");
+  sidebar.classList.toggle("collapsed");
+  document.getElementById("panelToggle").textContent = sidebar.classList.contains("collapsed") ? "+" : "−";
+  setTimeout(() => map.invalidateSize({pan: false}), 200);
+});
+
+document.getElementById("loadBtn").addEventListener("click", loadAndRender);
+document.getElementById("openBrowserBtn").addEventListener("click", openCurrentPageInBrowser);
+document.getElementById("fitAcadBtn").addEventListener("click", () => fitRegion("acad"));
+document.getElementById("fitShlyuzBtn").addEventListener("click", () => fitRegion("shlyuz"));
+document.getElementById("fitShchBtn").addEventListener("click", () => fitRegion("shch"));
+document.getElementById("fitLozhokBtn").addEventListener("click", () => fitRegion("lozhok"));
+document.getElementById("fitAllBtn").addEventListener("click", fitAssigned);
+document.getElementById("pngBtn").addEventListener("click", downloadPng);
+document.getElementById("schoolFilter").addEventListener("change", event => {
+  selectedSchoolId = event.target.value;
+  applySchoolFilter();
+});
+
+map.on("zoomend moveend", applySchoolFilter);
+
+document.getElementById("officialSourceLink").href = OFFICIAL_SOURCE_URL;
+window.addEventListener("resize", updateMobileViewport);
+window.addEventListener("orientationchange", () => setTimeout(updateMobileViewport, 250));
+updateMobileViewport();
+maybeCollapsePanelOnMobile();
+
+if (isSmallScreen()) {
+  const hint = document.getElementById("mobileOpenHint");
+  if (hint) {
+    hint.innerHTML = "На телефоне после загрузки панель свернется, чтобы не закрывать карту.";
+  }
+}
+
+renderLegend();
+renderSchoolFilter();
+renderLayerToggles();
+setTimeout(loadAndRender, 500);
+</script>
+</body>
+</html>
