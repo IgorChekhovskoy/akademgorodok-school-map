@@ -60,8 +60,26 @@
       max-height: none;
       overflow: visible;
     }
-    #sidebar.collapsed > *:not(#panelHeader) {
+    #sidebar.collapsed > *:not(#panelHeader):not(#mobileQuickHelp) {
       display: none;
+    }
+    #mobileQuickHelp {
+      display: none;
+    }
+    .mobile-help-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 8px 0 5px;
+    }
+    .mobile-help-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .mobile-help-actions button {
+      width: 100%;
+      margin: 0;
     }
     #panelHeader {
       display: flex;
@@ -336,19 +354,22 @@
         -webkit-overflow-scrolling: touch;
       }
       #sidebar.collapsed {
-        right: auto;
-        width: min(320px, calc(100vw - 20px));
-        max-height: none;
-        padding: 10px 12px;
-        overflow: visible;
+        width: auto;
+        max-height: min(42dvh, 330px);
+        padding: 12px;
+        overflow: auto;
       }
       #sidebar.collapsed h1 {
-        max-width: 240px;
+        max-width: calc(100vw - 96px);
         margin: 0;
-        font-size: 14px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        font-size: 16px;
+        line-height: 1.25;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+      }
+      #sidebar.collapsed #mobileQuickHelp {
+        display: block;
       }
       #panelHeader {
         align-items: center;
@@ -403,10 +424,25 @@
       <button id="panelToggle" title="Свернуть/развернуть панель">−</button>
     </div>
 
+    <div id="mobileQuickHelp">
+      <div class="mobile-help-title">Что показывает карта</div>
+      <p class="small">
+        Каждая цветная точка — это дом. Цвет показывает школу, к которой он закреплен.
+      </p>
+      <p class="small">
+        Нажмите на точку, чтобы увидеть адрес дома и школу.
+      </p>
+      <div class="mobile-help-actions">
+        <button id="mobileLegendBtn" type="button">Легенда</button>
+        <button id="mobileFilterBtn" type="button">Фильтр</button>
+      </div>
+    </div>
+
     <p><b>Охват:</b> Академгородок, Шлюз, мкр. «Щ», Ложок / Горки Академпарка.</p>
 
     <div class="note">
-      Цветные точки показывают дома, закрепленные за школами.
+      Каждая цветная точка — отдельный дом. Цвет точки показывает школу, к которой закреплен этот адрес.
+      Нажмите на точку, чтобы увидеть адрес дома и школу.
     </div>
 
     <div class="note">
@@ -430,13 +466,13 @@
     <button id="fitAllBtn" disabled>Весь охват</button>
     <button id="pngBtn" disabled>Скачать PNG текущей карты</button>
 
-    <h2>Фильтр по школе</h2>
+    <h2 id="filterTitle">Фильтр по школе</h2>
     <p class="small">Выберите школу: она останется яркой, остальные закрепленные дома станут полупрозрачными.</p>
     <select id="schoolFilter" disabled>
       <option value="all">Все школы</option>
     </select>
 
-    <h2>Легенда и слои</h2>
+    <h2 id="legendTitle">Легенда и слои</h2>
     <p class="small">Включайте и выключайте нужные школы и дополнительные элементы карты.</p>
     <div id="layerToggles"></div>
 
@@ -732,6 +768,22 @@ function maybeExpandPanelOnMobile() {
     document.getElementById("panelToggle").textContent = "−";
     setTimeout(() => map.invalidateSize({pan: false}), 200);
   }
+}
+
+function openPanelAndScrollTo(targetId) {
+  const sidebar = document.getElementById("sidebar");
+  if (sidebar.classList.contains("collapsed")) {
+    sidebar.classList.remove("collapsed");
+    document.getElementById("panelToggle").textContent = "−";
+  }
+
+  setTimeout(() => {
+    const target = document.getElementById(targetId);
+    if (target) {
+      target.scrollIntoView({block: "start", behavior: "smooth"});
+    }
+    map.invalidateSize({pan: false});
+  }, 120);
 }
 
 let assignedLayers = [];
@@ -1199,7 +1251,7 @@ function renderSchoolObjects(elements) {
     }
 
     const markerStyle = {
-      radius: 11,
+      radius: isSmallScreen() ? 9 : 11,
       color: "#111111",
       weight: 2.4,
       fillColor: school.color,
@@ -1261,7 +1313,7 @@ function renderSchoolFallbackObjects(elements) {
       }
 
       const markerStyle = {
-        radius: 11,
+        radius: isSmallScreen() ? 9 : 11,
         color: "#111111",
         weight: 2.4,
         fillColor: school.color,
@@ -1287,7 +1339,7 @@ function renderSchoolFallbackObjects(elements) {
       };
       const popup = schoolObjectPopupHtml(fallbackTags, school);
       const markerStyle = {
-        radius: 11,
+        radius: isSmallScreen() ? 9 : 11,
         color: "#111111",
         weight: 2.4,
         fillColor: school.color,
@@ -1505,7 +1557,7 @@ function renderAssignedAddress(element, address, matches) {
   }
 
   const markerStyle = {
-    radius: isConflict ? 9 : 8,
+    radius: isSmallScreen() ? (isConflict ? 7 : 6) : (isConflict ? 9 : 8),
     color: isConflict ? "#000000" : "#222222",
     weight: isConflict ? 3.2 : 1.6,
     fillColor,
@@ -1803,6 +1855,8 @@ document.getElementById("panelToggle").addEventListener("click", () => {
 });
 
 document.getElementById("loadBtn").addEventListener("click", loadAndRender);
+document.getElementById("mobileLegendBtn").addEventListener("click", () => openPanelAndScrollTo("legendTitle"));
+document.getElementById("mobileFilterBtn").addEventListener("click", () => openPanelAndScrollTo("filterTitle"));
 document.getElementById("fitAcadBtn").addEventListener("click", () => fitRegion("acad"));
 document.getElementById("fitShlyuzBtn").addEventListener("click", () => fitRegion("shlyuz"));
 document.getElementById("fitShchBtn").addEventListener("click", () => fitRegion("shch"));
