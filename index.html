@@ -181,21 +181,7 @@
     .small {
       font-size: 12px;
       color: #555;
-    }
-    .mobile-only {
-      display: none;
-    }
-    .browser-open-btn {
-      width: 100%;
-      margin: 8px 0 0;
-      border-color: #0b6efd;
-      color: #0b6efd;
-      font-weight: 700;
-    }
-    .browser-open-status {
-      margin-top: 6px;
-    }
-    .popup-title {
+    }    .popup-title {
       font-weight: bold;
       margin-bottom: 5px;
     }
@@ -390,11 +376,7 @@
       }
       button.primary {
         width: 100%;
-      }
-      .mobile-only {
-        display: block;
-      }
-      .leaflet-top.leaflet-left {
+      }      .leaflet-top.leaflet-left {
         top: 10px;
       }
       .leaflet-control-zoom {
@@ -440,12 +422,6 @@
       <br><a id="officialSourceLink" class="source-link" href="#" target="_blank" rel="noopener">Открыть источник</a>
     </div>
 
-    <div class="note mobile-only">
-      На телефоне карта лучше работает в обычном браузере.
-      <button id="openBrowserBtn" class="browser-open-btn" type="button">Открыть в браузере</button>
-      <div id="openBrowserStatus" class="small browser-open-status"></div>
-    </div>
-
     <button id="loadBtn" class="primary">Загрузить / обновить карту</button>
     <button id="fitAcadBtn" disabled>Академгородок</button>
     <button id="fitShlyuzBtn" disabled>Шлюз</button>
@@ -466,8 +442,7 @@
 
     <h2>Статус</h2>
     <div id="sourceStatus" class="small">Источник еще не проверялся.</div>
-    <div id="status" class="small">Карта начнет загрузку автоматически. Подождите несколько секунд.</div>
-    <div id="mobileOpenHint" class="small"></div>
+    <div id="status" class="small">Карта загружается автоматически. Подождите несколько секунд.</div>
 
     <h2>Статистика</h2>
     <div id="stats"></div>
@@ -495,12 +470,8 @@
 <script>
 if (typeof L === "undefined") {
   const status = document.getElementById("status");
-  const hint = document.getElementById("mobileOpenHint");
   if (status) {
-    status.innerHTML = '<div class="warn">Карта не смогла загрузить библиотеку отображения. Откройте файл в Safari, Chrome или другом обычном браузере.</div>';
-  }
-  if (hint) {
-    hint.innerHTML = 'На iPhone файл из Telegram иногда открывается во встроенном просмотрщике. Нажмите «Поделиться» и выберите «Открыть в Safari».';
+    status.innerHTML = '<div class="warn">Карта не смогла загрузить библиотеку отображения. Обновите страницу или попробуйте открыть ее позже.</div>';
   }
   throw new Error("Leaflet is not available");
 }
@@ -761,127 +732,6 @@ function maybeExpandPanelOnMobile() {
     document.getElementById("panelToggle").textContent = "−";
     setTimeout(() => map.invalidateSize({pan: false}), 200);
   }
-}
-
-function chromeUrlFromHttpUrl(url) {
-  if (url.startsWith("https://")) {
-    return "googlechromes://" + url.slice("https://".length);
-  }
-  if (url.startsWith("http://")) {
-    return "googlechrome://" + url.slice("http://".length);
-  }
-  return "";
-}
-
-function safariUrlFromHttpUrl(url) {
-  if (url.startsWith("https://")) {
-    return "x-safari-https://" + url.slice("https://".length);
-  }
-  return "";
-}
-
-function androidChromeIntentFromHttpUrl(url) {
-  if (!url.startsWith("https://") && !url.startsWith("http://")) {
-    return "";
-  }
-  const scheme = url.startsWith("https://") ? "https" : "http";
-  const withoutScheme = url.replace(/^https?:\/\//, "");
-  return "intent://" + withoutScheme + "#Intent;scheme=" + scheme + ";package=com.android.chrome;end";
-}
-
-function tryOpenExternalUrl(targetUrl) {
-  const link = document.createElement("a");
-  link.href = targetUrl;
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  setTimeout(() => {
-    try {
-      window.location.href = targetUrl;
-    } catch (error) {
-      // Если контейнер Telegram запрещает переход по схеме, ниже покажем понятный статус.
-    }
-  }, 80);
-}
-
-function makeCurrentHtmlFile() {
-  const html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
-  return new File([html], "akademgorodok_school_map.html", {type: "text/html"});
-}
-
-async function shareCurrentHtmlFile(status) {
-  if (!navigator.share || !navigator.canShare || typeof File === "undefined") {
-    return false;
-  }
-
-  const file = makeCurrentHtmlFile();
-  if (!navigator.canShare({files: [file]})) {
-    return false;
-  }
-
-  if (status) {
-    status.textContent = "Открываю системное окно. Выберите Safari, Chrome или сохранение в Файлы.";
-  }
-  await navigator.share({files: [file]});
-  return true;
-}
-
-async function openCurrentPageInBrowser() {
-  const status = document.getElementById("openBrowserStatus");
-  const currentUrl = window.location.href;
-  const userAgent = navigator.userAgent || "";
-  const isIos = /iPad|iPhone|iPod/.test(userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  const isAndroid = /Android/i.test(userAgent);
-  const isHttpUrl = currentUrl.startsWith("https://") || currentUrl.startsWith("http://");
-  const isLocalUrl = currentUrl.startsWith("file:") || currentUrl.startsWith("blob:") || currentUrl.startsWith("data:");
-
-  if (status) {
-    status.textContent = "Пробую открыть карту в браузере...";
-  }
-
-  if (isIos && isHttpUrl) {
-    tryOpenExternalUrl("com-apple-mobilesafari-tab:" + currentUrl);
-    setTimeout(() => tryOpenExternalUrl(safariUrlFromHttpUrl(currentUrl)), 350);
-    setTimeout(() => tryOpenExternalUrl(chromeUrlFromHttpUrl(currentUrl)), 700);
-  } else if (isAndroid && isHttpUrl) {
-    tryOpenExternalUrl(androidChromeIntentFromHttpUrl(currentUrl));
-  } else if (isHttpUrl) {
-    window.open(currentUrl, "_blank", "noopener,noreferrer");
-  } else if (isLocalUrl || !isHttpUrl) {
-    if (isIos) {
-      tryOpenExternalUrl("com-apple-mobilesafari-tab:" + currentUrl);
-    }
-
-    setTimeout(async () => {
-      if (document.hidden) {
-        return;
-      }
-
-      try {
-        const shared = await shareCurrentHtmlFile(status);
-        if (shared) {
-          return;
-        }
-      } catch (error) {
-        // Некоторые встроенные просмотрщики не дают открыть системное окно; тогда пишем коротко ниже.
-      }
-
-      if (status) {
-        status.textContent = "Telegram не отдал локальный HTML во внешний браузер. Сохраните файл в Файлы и откройте его оттуда.";
-      }
-    }, 900);
-  }
-
-  setTimeout(() => {
-    if (document.hidden || !status || !isHttpUrl) {
-      return;
-    }
-    status.textContent = "Если браузер не открылся, этот просмотрщик блокирует внешний переход.";
-  }, 1600);
 }
 
 let assignedLayers = [];
@@ -1916,10 +1766,7 @@ async function loadAndRender() {
     }
   } catch (error) {
     maybeExpandPanelOnMobile();
-    const hint = window.location.protocol === "file:"
-      ? " Если файл открыт из Telegram на iPhone, попробуйте открыть его через Safari или Chrome."
-      : "";
-    status.innerHTML = `<div class="warn">Ошибка загрузки: ${escapeHtml(error.message || error)}. Попробуйте еще раз через минуту.${hint}</div>`;
+    status.innerHTML = `<div class="warn">Ошибка загрузки: ${escapeHtml(error.message || error)}. Попробуйте еще раз через минуту.</div>`;
   } finally {
     loadBtn.disabled = false;
     setLoading(false);
@@ -1956,7 +1803,6 @@ document.getElementById("panelToggle").addEventListener("click", () => {
 });
 
 document.getElementById("loadBtn").addEventListener("click", loadAndRender);
-document.getElementById("openBrowserBtn").addEventListener("click", openCurrentPageInBrowser);
 document.getElementById("fitAcadBtn").addEventListener("click", () => fitRegion("acad"));
 document.getElementById("fitShlyuzBtn").addEventListener("click", () => fitRegion("shlyuz"));
 document.getElementById("fitShchBtn").addEventListener("click", () => fitRegion("shch"));
@@ -1975,13 +1821,6 @@ window.addEventListener("resize", updateMobileViewport);
 window.addEventListener("orientationchange", () => setTimeout(updateMobileViewport, 250));
 updateMobileViewport();
 maybeCollapsePanelOnMobile();
-
-if (isSmallScreen()) {
-  const hint = document.getElementById("mobileOpenHint");
-  if (hint) {
-    hint.innerHTML = "На телефоне после загрузки панель свернется, чтобы не закрывать карту.";
-  }
-}
 
 renderLegend();
 renderSchoolFilter();
