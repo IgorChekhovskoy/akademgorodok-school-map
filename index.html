@@ -457,7 +457,7 @@
         Каждая цветная точка — это дом. Цвет показывает школу, к которой он закреплен.
       </p>
       <p class="small">
-        Нажмите на точку, чтобы увидеть адрес дома и школу.
+        Наведите курсор или коснитесь точки, чтобы увидеть адрес дома и школу.
       </p>
       <button id="mobileMenuBtn" class="primary mobile-menu-main" type="button">Открыть меню</button>
       <div class="mobile-help-actions">
@@ -470,7 +470,7 @@
 
     <div class="note">
       Каждая цветная точка — отдельный дом. Цвет точки показывает школу, к которой закреплен этот адрес.
-      Нажмите на точку, чтобы увидеть адрес дома и школу.
+      Наведите курсор или коснитесь точки, чтобы увидеть адрес дома и школу.
     </div>
 
     <div class="note">
@@ -757,14 +757,6 @@ const overlayLayers = {
 for (const school of SCHOOLS) {
   overlayLayers[school.name] = layers[school.id];
 }
-const titleControl = L.control({position: "bottomright"});
-titleControl.onAdd = function () {
-  const div = L.DomUtil.create("div", "map-title");
-  div.innerHTML = "<b>Подомовая карта</b><br>цвет дома показывает школу закрепления";
-  return div;
-};
-titleControl.addTo(map);
-
 const osmAttributionControl = L.control({position: "bottomleft"});
 osmAttributionControl.onAdd = function () {
   const div = L.DomUtil.create("div", "osm-attribution");
@@ -1588,7 +1580,6 @@ function renderAssignedAddress(element, address, matches) {
   const layerGroup = isConflict ? conflictLayer : layers[school.id];
   const color = isConflict ? "#000000" : school.color;
   const fillColor = isConflict ? "#ffffff" : school.color;
-  const popup = popupHtml(address, matches, isConflict);
   const tooltip = tooltipHtml(address, matches, isConflict);
 
   if (geom.coords.length >= 4 && isClosed(geom.coords)) {
@@ -1600,9 +1591,7 @@ function renderAssignedAddress(element, address, matches) {
       opacity: 1.0
     };
     const polygon = L.polygon(geom.coords, polygonStyle);
-    polygon.bindPopup(popup);
     polygon.bindTooltip(tooltip, {sticky: true});
-    polygon.on("click", () => polygon.openPopup());
     layerGroup.addLayer(polygon);
     rememberAssignedLayer(polygon, matches, polygonStyle);
   }
@@ -1616,9 +1605,7 @@ function renderAssignedAddress(element, address, matches) {
     opacity: 1.0
   };
   const marker = L.circleMarker(geom.point, markerStyle);
-  marker.bindPopup(popup);
   marker.bindTooltip(tooltip, {sticky: true});
-  marker.on("click", () => marker.openPopup());
   layerGroup.addLayer(marker);
   rememberAssignedLayer(marker, matches, markerStyle);
 
